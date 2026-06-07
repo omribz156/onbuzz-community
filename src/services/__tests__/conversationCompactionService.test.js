@@ -110,6 +110,24 @@ describe('ConversationCompactionService', () => {
     expect(chunks[0].endsWith('. ')).toBe(true);
   });
 
+  test('_splitContentIntoChunks splits at semicolon boundary before hard cut', () => {
+    const content = 'A'.repeat(140) + ';' + 'B'.repeat(140);
+    const maxChunk = 200;
+    const chunks = service._splitContentIntoChunks(content, maxChunk);
+    expect(chunks.length).toBe(2);
+    expect(chunks[0]).toHaveLength(141);
+    expect(chunks[0].endsWith(';')).toBe(true);
+  });
+
+  test('_splitContentIntoChunks splits at space boundary before hard cut', () => {
+    const content = 'A'.repeat(140) + ' ' + 'B'.repeat(140);
+    const maxChunk = 200;
+    const chunks = service._splitContentIntoChunks(content, maxChunk);
+    expect(chunks.length).toBe(2);
+    expect(chunks[0]).toHaveLength(141);
+    expect(chunks[0].endsWith(' ')).toBe(true);
+  });
+
   test('_splitContentIntoChunks hard-cuts when no boundaries found', () => {
     // Single continuous string with no newlines, no periods, no spaces
     const content = 'X'.repeat(500);

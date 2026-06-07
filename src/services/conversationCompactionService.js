@@ -973,7 +973,7 @@ class ConversationCompactionService {
     const assistantMsgs = middleMessages.filter(m => m.role === 'assistant');
 
     // Extract file paths mentioned in messages
-    const filePathRegex = /(?:\/[\w.-]+)+\.\w+|(?:[A-Za-z]:)?(?:\\[\w.-]+)+\.\w+|(?:src|lib|test|config|public|dist|build|node_modules)\/[\w./\-]+/g;
+    const filePathRegex = /(?:\/[\w.-]+)+\.\w+|(?:[A-Za-z]:)?(?:\\[\w.-]+)+\.\w+|(?:src|lib|test|config|public|dist|build|node_modules)\/[\w./-]+/g;
     const filePaths = new Set();
     for (const msg of middleMessages) {
       const content = typeof msg.content === 'string' ? msg.content : '';
@@ -1068,7 +1068,7 @@ class ConversationCompactionService {
 
   /**
    * Split content into chunks, respecting natural boundaries.
-   * Priority: double newlines > single newlines > hard cut at maxChunk.
+   * Priority: double newlines > single newlines > sentence boundary > soft boundary > hard cut.
    *
    * @param {string} content - Content to split
    * @param {number} maxChunk - Maximum chunk size in chars
@@ -1107,9 +1107,19 @@ class ConversationCompactionService {
         }
       }
 
-      // Fallback: hard cut (e.g. minified code with no newlines)
-      // TODO: Consider splitting at last space or semicolon before maxChunk
-      //       to avoid breaking mid-token/mid-word in minified code
+      // Fallback: soft boundary before hard cut.
+      // This avoids breaking mid-word or mid-token when text/code has spaces or semicolons.
+      if (splitAt === -1) {
+        const lastSemicolon = searchRange.lastIndexOf(';');
+        const lastSpace = searchRange.lastIndexOf(' ');
+        const lastSoftBoundary = Math.max(lastSemicolon, lastSpace);
+
+        if (lastSoftBoundary > maxChunk * 0.3) {
+          splitAt = lastSoftBoundary + 1;
+        }
+      }
+
+      // Fallback: hard cut (e.g. continuous text with no natural boundaries)
       if (splitAt === -1) {
         splitAt = maxChunk;
       }
